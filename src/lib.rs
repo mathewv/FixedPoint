@@ -5,6 +5,7 @@ use std::cmp::{PartialEq, Eq};
 use num::{Zero, One, Num, FromPrimitive, ToPrimitive, NumCast, Bounded, Saturating};
 use num::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv};
 
+#[macro_export]
 macro_rules! fixed_point_impl {
     ($name:ident: $ty:ty, $tyd:ty, $ibits:expr, $fbits:expr) => {
         struct $name {
