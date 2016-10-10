@@ -6,12 +6,11 @@ pub mod prelude {
     pub use num::{Zero, One, Num, FromPrimitive, ToPrimitive, NumCast, Bounded, Saturating};
     pub use num::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv};
 }
-use self::prelude::*;
 
 #[macro_export]
 macro_rules! fixed_point_impl {
     ($name:ident: $ty:ty, $tyd:ty, $ibits:expr, $fbits:expr) => {
-        struct $name {
+        pub struct $name {
             base: $ty,
         }
 
@@ -234,5 +233,3 @@ macro_rules! fixed_point_impl {
     };
 }
 
-fixed_point_impl!(U24p8: u32, u64, 24, 8);
-fixed_point_impl!(I24p8: i32, i64, 24, 8);
