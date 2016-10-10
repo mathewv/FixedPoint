@@ -1,9 +1,12 @@
 extern crate num;
 
-use std::ops::{Add, Sub, Mul, Div, Rem};
-use std::cmp::{PartialEq, Eq};
-use num::{Zero, One, Num, FromPrimitive, ToPrimitive, NumCast, Bounded, Saturating};
-use num::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv};
+pub mod prelude {
+    pub use std::ops::{Add, Sub, Mul, Div, Rem};
+    pub use std::cmp::{PartialEq, Eq};
+    pub use num::{Zero, One, Num, FromPrimitive, ToPrimitive, NumCast, Bounded, Saturating};
+    pub use num::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv};
+}
+use self::prelude::*;
 
 #[macro_export]
 macro_rules! fixed_point_impl {
