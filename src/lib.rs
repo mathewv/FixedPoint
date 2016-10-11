@@ -1,17 +1,52 @@
 extern crate num;
 
 pub mod prelude {
-    pub use std::ops::{Add, Sub, Mul, Div, Rem};
+    pub use std::ops::{Add, Sub, Mul, Div, Rem, AddAssign, SubAssign, MulAssign, DivAssign, RemAssign};
     pub use std::cmp::{PartialEq, Eq};
-    pub use num::{Zero, One, Num, FromPrimitive, ToPrimitive, NumCast, Bounded, Saturating};
+    pub use std::convert::From;
+    pub use num::{Zero, One, Num, Bounded, Saturating};
     pub use num::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv};
+    pub use std::fmt;
 }
 
 #[macro_export]
 macro_rules! fixed_point_impl {
-    ($name:ident: $ty:ty, $tyd:ty, $ibits:expr, $fbits:expr) => {
+    ($name:ident: $itype:ty, $bigitype:ty, $fbits:expr) => {
+        #[derive(Debug, Copy, Clone, PartialEq, Eq)]
         pub struct $name {
-            base: $ty,
+            base: $itype,
+        }
+
+        impl $name {
+            fn from_int(n: $itype) -> Option<Self> {
+                if n < Self::min_value().to_int() ||
+                    n > Self::max_value().to_int() {
+                    None
+                } else {
+                    Some($name {
+                        base: (n as $itype) << $fbits,
+                    })
+                }
+            }
+
+            fn from_float(n: f64) -> Option<Self> {
+                if n < Self::min_value().to_float() ||
+                    n > Self::max_value().to_float() {
+                    None
+                } else {
+                    Some($name {
+                        base: (n * ((1 << $fbits) as f64)) as $itype,
+                    })
+                }
+            }
+
+            fn to_int(&self) -> $itype {
+                (self.base >> $fbits) as $itype
+            }
+
+            fn to_float(&self) -> f64 {
+                (self.base as f64) / ((1 << $fbits) as f64)
+            }
         }
 
         impl Add for $name {
@@ -36,7 +71,7 @@ macro_rules! fixed_point_impl {
             type Output = Self;
             fn mul(self, rhs: Self) -> Self {
                 $name {
-                    base: ((self.base as $tyd * rhs.base as $tyd) >> $fbits) as $ty,
+                    base: ((self.base as $bigitype * rhs.base as $bigitype) >> $fbits) as $itype,
                 }
             }
         }
@@ -45,7 +80,7 @@ macro_rules! fixed_point_impl {
             type Output = Self;
             fn div(self, rhs: Self) -> Self {
                 $name {
-                    base: (((self.base as $tyd) << $fbits) / (rhs.base as $tyd)) as $ty,
+                    base: (((self.base as $bigitype) << $fbits) / (rhs.base as $bigitype)) as $itype,
                 }
             }
         }
@@ -56,6 +91,36 @@ macro_rules! fixed_point_impl {
                 $name {
                     base: self.base % rhs.base,
                 }
+            }
+        }
+
+        impl AddAssign for $name {
+            fn add_assign(&mut self, rhs: Self) {
+                self.base += rhs.base;
+            }
+        }
+
+        impl SubAssign for $name {
+            fn sub_assign(&mut self, rhs: Self) {
+                self.base -= rhs.base;
+            }
+        }
+
+        impl MulAssign for $name {
+            fn mul_assign(&mut self, rhs: Self) {
+                self.base = ((self.base as $bigitype * rhs.base as $bigitype) >> $fbits) as $itype;
+            }
+        }
+
+        impl DivAssign for $name {
+            fn div_assign(&mut self, rhs: Self) {
+                self.base = (((self.base as $bigitype) << $fbits) / (rhs.base as $bigitype)) as $itype;
+            }
+        }
+
+        impl RemAssign for $name {
+            fn rem_assign(&mut self, rhs: Self) {
+                self.base %= rhs.base;
             }
         }
 
@@ -79,14 +144,6 @@ macro_rules! fixed_point_impl {
             }
         }
 
-        impl PartialEq for $name {
-            fn eq(&self, other: &Self) -> bool {
-                self.base == other.base
-            }
-        }
-
-        impl Eq for $name { }
-
         impl Num for $name {
             type FromStrRadixErr = ();
             fn from_str_radix(_str: &str, _radix: u32) -> Result<Self, Self::FromStrRadixErr> {
@@ -94,62 +151,27 @@ macro_rules! fixed_point_impl {
             }
         }
 
-        impl FromPrimitive for $name {
-            fn from_i64(n: i64) -> Option<Self> {
-                if n < Self::min_value().to_i64().unwrap() ||
-                    n > Self::max_value().to_i64().unwrap() {
-                    None
-                } else {
-                    Some($name {
-                        base: n as $ty << $fbits,
-                    })
-                }
-            }
-
-            fn from_u64(n: u64) -> Option<Self> {
-                if n > Self::max_value().to_u64().unwrap() {
-                    None
-                } else {
-                    Some($name {
-                        base: n as $ty << $fbits,
-                    })
-                }
-            }
-
-            fn from_f64(n: f64) -> Option<Self> {
-                if n < Self::min_value().to_f64().unwrap() ||
-                    n > Self::max_value().to_f64().unwrap() {
-                    None
-                } else {
-                    Some($name {
-                        base: (n * ((1 << $fbits) as f64)) as $ty,
-                    })
-                }
+        impl From<$itype> for $name {
+            fn from(n: $itype) -> Self {
+                Self::from_int(n).unwrap()
             }
         }
 
-        impl ToPrimitive for $name {
-            fn to_i64(&self) -> Option<i64> {
-                Some((self.base >> $fbits) as i64)
-            }
-
-            #[allow(unused_comparisons)]
-            fn to_u64(&self) -> Option<u64> {
-                if self.base < 0 {
-                    None
-                } else {
-                    Some((self.base >> $fbits) as u64)
-                }
-            }
-
-            fn to_f64(&self) -> Option<f64> {
-                Some(self.base as f64 / (1 << $fbits) as f64)
+        impl From<f64> for $name {
+            fn from(n: f64) -> Self {
+                Self::from_float(n).unwrap()
             }
         }
 
-        impl NumCast for $name {
-            fn from<T: ToPrimitive>(n: T) -> Option<Self> {
-                n.to_f64().and_then(|f| FromPrimitive::from_f64(f))
+        impl Into<$itype> for $name {
+            fn into(self) -> $itype {
+                self.to_int()
+            }
+        }
+
+        impl Into<f64> for $name {
+            fn into(self) -> f64 {
+                self.to_float()
             }
         }
 
@@ -199,15 +221,15 @@ macro_rules! fixed_point_impl {
 
         impl CheckedMul for $name {
             fn checked_mul(&self, rhs: &Self) -> Option<Self> {
-                (self.base as $tyd).checked_mul(rhs.base as $tyd).and_then(|mut base_double| {
+                (self.base as $bigitype).checked_mul(rhs.base as $bigitype).and_then(|mut base_double| {
                     base_double = base_double >> $fbits;
                     let $name { base: max_base } = Self::max_value();
                     let $name { base: min_base } = Self::min_value();
-                    if base_double > max_base as $tyd || base_double < min_base as $tyd {
+                    if base_double > max_base as $bigitype || base_double < min_base as $bigitype {
                         None
                     } else {
                         Some($name {
-                            base: base_double as $ty
+                            base: base_double as $itype
                         })
                     }
                 })
@@ -216,20 +238,54 @@ macro_rules! fixed_point_impl {
 
         impl CheckedDiv for $name {
             fn checked_div(&self, rhs: &Self) -> Option<Self> {
-                ((self.base as $tyd) << $fbits).checked_div(rhs.base as $tyd)
+                ((self.base as $bigitype) << $fbits).checked_div(rhs.base as $bigitype)
                     .and_then(|base_double| {
                         let $name { base: max_base } = Self::max_value();
                         let $name { base: min_base } = Self::min_value();
-                        if base_double > max_base as $tyd || base_double < min_base as $tyd {
+                        if base_double > max_base as $bigitype || base_double < min_base as $bigitype {
                             None
                         } else {
                             Some($name {
-                                base: base_double as $ty
+                                base: base_double as $itype
                             })
                         }
                     })
             }
         }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                self.to_float().fmt(f)
+            }
+        }
+
+        impl fmt::Binary for $name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                self.base.fmt(f)
+            }
+        }
+
+        impl fmt::UpperHex for $name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                self.base.fmt(f)
+            }
+        }
+
+        impl fmt::LowerHex for $name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                self.base.fmt(f)
+            }
+        }
     };
 }
 
+#[test]
+fn test() {
+    use self::prelude::*;
+    fixed_point_impl!(Fixed: i32, i64, 4);
+
+    let mut num = Fixed::from(5);
+    num += Fixed::from(5);
+    num = num * Fixed::from(5) / Fixed::from(9);
+    println!("{}", num);
+}
