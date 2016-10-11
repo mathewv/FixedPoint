@@ -18,11 +18,11 @@ macro_rules! fixed_point_impl {
         }
 
         impl $name {
-            fn new(base: $itype) -> Self {
-                Self { base: base }
+            pub fn new(base: $itype) -> Self {
+                $name { base: base }
             }
 
-            fn from_int(n: $itype) -> Option<Self> {
+            pub fn from_int(n: $itype) -> Option<Self> {
                 if n < Self::min_value().to_int() ||
                     n > Self::max_value().to_int() {
                     None
@@ -33,7 +33,7 @@ macro_rules! fixed_point_impl {
                 }
             }
 
-            fn from_float(n: f64) -> Option<Self> {
+            pub fn from_float(n: f64) -> Option<Self> {
                 if n < Self::min_value().to_float() ||
                     n > Self::max_value().to_float() {
                     None
@@ -44,11 +44,11 @@ macro_rules! fixed_point_impl {
                 }
             }
 
-            fn to_int(&self) -> $itype {
+            pub fn to_int(&self) -> $itype {
                 (self.base >> $fbits) as $itype
             }
 
-            fn to_float(&self) -> f64 {
+            pub fn to_float(&self) -> f64 {
                 (self.base as f64) / ((1 << $fbits) as f64)
             }
         }
