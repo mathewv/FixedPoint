@@ -14,10 +14,14 @@ macro_rules! fixed_point_impl {
     ($name:ident: $itype:ty, $bigitype:ty, $fbits:expr) => {
         #[derive(Debug, Copy, Clone, PartialEq, Eq)]
         pub struct $name {
-            base: $itype,
+            pub base: $itype,
         }
 
         impl $name {
+            fn new(base: $itype) -> Self {
+                Self { base: base }
+            }
+
             fn from_int(n: $itype) -> Option<Self> {
                 if n < Self::min_value().to_int() ||
                     n > Self::max_value().to_int() {
