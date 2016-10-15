@@ -2,7 +2,7 @@ extern crate num;
 
 pub mod prelude {
     pub use std::ops::{Add, Sub, Mul, Div, Rem, AddAssign, SubAssign, MulAssign, DivAssign, RemAssign};
-    pub use std::cmp::{PartialEq, Eq};
+    pub use std::cmp::{PartialEq, Eq, PartialOrd, Ord};
     pub use std::convert::From;
     pub use num::{Zero, One, Num, Bounded, Saturating};
     pub use num::{CheckedAdd, CheckedSub, CheckedMul, CheckedDiv};
@@ -12,7 +12,7 @@ pub mod prelude {
 #[macro_export]
 macro_rules! fixed_point_impl {
     ($name:ident: $itype:ty, $bigitype:ty, $fbits:expr) => {
-        #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+        #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
         pub struct $name {
             pub base: $itype,
         }
@@ -291,5 +291,5 @@ fn test() {
     let mut num = Fixed::from(5);
     num += Fixed::from(5);
     num = num * Fixed::from(5) / Fixed::from(9);
-    println!("{}", num);
+    println!("{}", num < Fixed::from(7));
 }
